@@ -1,0 +1,9 @@
+[workspace]
+members=[
+    "components/mcmu_server",
+    "components/mcmu_client",
+    "components/mcmu_basic"
+]
+
+[profile.release]
+opt-level=3

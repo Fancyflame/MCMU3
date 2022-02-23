@@ -1,0 +1,22 @@
+[package]
+name = "mcmu_basic"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+lazy_static="1"
+thiserror="1"
+json="0"
+rand="0"
+regex="1"
+tokio = {version = "1", features = ["io-util"]}
+bincode = "1"
+serde = {version="1",features=["derive"]}
+blake3="1"
+home="0"
+anyhow="1"
+smallvec="1"
+#smallstr="0"
+owning_ref="0"
