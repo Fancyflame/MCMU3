@@ -9,3 +9,5 @@ pub mod protocol {
     pub mod mcmu;
     pub mod minecraft;
 }
+
+pub use protocol::mcmu::UserId;

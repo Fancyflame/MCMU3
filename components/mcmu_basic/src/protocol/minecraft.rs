@@ -1,18 +1,12 @@
-use owning_ref::VecRefMut;
 use rand::Rng;
 //use serde::{Deserialize, Serialize};
-use std::{
-    borrow::Cow,
-    io::Write,
-    ops::{Deref, Index, Range},
-    rc::Rc,
-};
+use std::{borrow::Cow, io::Write};
 
-const UNCONNECTED_PING: &[u8] = &[
+pub const UNCONNECTED_PING: &[u8] = &[
     1, 0, 0, 0, 0, 0, 0, 11, 231, 0, 255, 255, 0, 254, 254, 254, 254, 253, 253, 253, 253, 18, 52,
     86, 120, 144, 237, 101, 30, 245, 192, 252, 166,
 ];
-const UNCONNECTED_PONG_PREFIX: &[u8] = &[
+pub const UNCONNECTED_PONG_PREFIX: &[u8] = &[
     28, 0, 0, 0, 0, 0, 209, 254, 33, 128, 245, 64, 50, 135, 169, 155, 178, 0, 255, 255, 0, 254,
     254, 254, 254, 253, 253, 253, 253, 18, 52, 86, 120, 0, 93,
 ];

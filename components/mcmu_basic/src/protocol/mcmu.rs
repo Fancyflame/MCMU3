@@ -1,4 +1,4 @@
-use std::{io::Error as IoError, ops::Deref};
+use std::io::Error as IoError;
 
 use serde::{Deserialize, Serialize};
 use thiserror::Error as ThisError;
@@ -20,7 +20,7 @@ pub struct Token(pub [u8; 16]);
 
 //用于访问数据库（Deserialize因为需要检查字符串所以手动实现）
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
-pub struct Id([u8; 32]);
+pub struct UserId([u8; 32]);
 
 #[derive(Serialize, Deserialize)]
 pub enum Protocol {
@@ -33,6 +33,21 @@ pub enum Protocol {
     Exit,
 }
 
+macro_rules! protocol_from {
+    [$($id:ident),*] => {
+        $(
+            impl From<$id> for Protocol{
+                #[inline]
+                fn from(obj:$id)->Self{
+                    Protocol::$id(obj)
+                }
+            }
+        )*
+    };
+}
+
+protocol_from![Login, Register, FriendOperate, RoomInfo];
+
 #[derive(Serialize, Deserialize)]
 pub enum Login {
     LoginStart,
@@ -40,7 +55,7 @@ pub enum Login {
         salt: [u8; 8],
     },
     Login {
-        id: Id,
+        id: UserId,
         pwd_hash2: [u8; 32], //加盐值后的hash
     },
     LoginSucceed,
@@ -54,9 +69,9 @@ pub enum Login {
 
 #[derive(Serialize, Deserialize)]
 pub enum Register {
-    CheckForIdAvailable(Id),
+    CheckForIdAvailable(UserId),
     Register {
-        id: Id,
+        id: UserId,
         name: String,
         pwd_hash: [u8; 32],
     },
@@ -73,14 +88,14 @@ pub enum RoomInfo {
     UpdateSucceed,
     DataTooLong,
     UpdateTooFrequent,
-    Get(Id),
+    Get(UserId),
     Failed(String),
 }
 
 #[derive(Serialize, Deserialize)]
 pub enum FriendOperate {
-    Add(Id),
-    Remove(Id),
+    Add(UserId),
+    Remove(UserId),
 }
 
 #[derive(Debug, ThisError)]
@@ -102,6 +117,14 @@ pub enum ProtocolError {
         MAX_PROTOCOL_SIZE
     )]
     ProtocolTooLarge,
+}
+
+pub fn hash_pwd(bytes: &[u8]) -> [u8; 32] {
+    const PWD_SALT: &[u8] = b"mcmu is awesome";
+    let mut hasher = blake3::Hasher::new();
+    hasher.update(bytes);
+    hasher.update(PWD_SALT);
+    *hasher.finalize().as_bytes()
 }
 
 impl Protocol {
@@ -130,41 +153,16 @@ impl Protocol {
     }
 }
 
-impl Id {
+impl UserId {
     #[inline]
     pub fn new(id: &str) -> Self {
-        Id(*blake3::hash(id.as_bytes()).as_bytes())
+        UserId(*blake3::hash(id.as_bytes()).as_bytes())
     }
 }
 
-// 下面是from实现
-
-impl From<Register> for Protocol {
+impl AsRef<[u8]> for UserId {
     #[inline]
-    fn from(reg: Register) -> Self {
-        Protocol::Register(reg)
-    }
-}
-
-impl From<Login> for Protocol {
-    #[inline]
-    fn from(log: Login) -> Self {
-        Protocol::Login(log)
-    }
-}
-
-impl From<RoomInfo> for Protocol {
-    #[inline]
-    fn from(upd: RoomInfo) -> Self {
-        Protocol::RoomInfo(upd)
-    }
-}
-
-impl Deref for Id {
-    type Target = [u8];
-
-    #[inline]
-    fn deref(&self) -> &Self::Target {
+    fn as_ref(&self) -> &[u8] {
         &self.0
     }
 }

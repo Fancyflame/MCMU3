@@ -1,7 +1,13 @@
-use anyhow::Result;
 use json::JsonValue;
 use smallvec::SmallVec;
 use std::{fs, path::PathBuf, str::FromStr};
+use thiserror::Error as ThisError;
+
+type Result<T> = std::result::Result<T, ProfileError>;
+
+#[derive(Debug, ThisError)]
+#[error("Profile error occurred: {0}")]
+pub struct ProfileError(#[from] anyhow::Error);
 
 lazy_static! {
     //储存文件夹
@@ -38,15 +44,15 @@ lazy_static! {
 }
 
 #[inline]
-fn parse_path(path: &str) -> Result<SmallVec<[&str; 10]>> {
-    Ok(path.split(".").collect())
+fn parse_path(path: &str) -> SmallVec<[&str; 10]> {
+    path.split(".").collect()
 }
 
 pub fn set_value(path: &str, value: String, try_create_path: bool) -> Result<()> {
     let mut pf = PROFILE.clone(); //mutable
     let mut prv = &mut pf;
 
-    let names = parse_path(path)?;
+    let names = parse_path(path);
     for (index, x) in names.iter().enumerate() {
         match prv {
             JsonValue::Object(obj) => {
@@ -64,24 +70,25 @@ pub fn set_value(path: &str, value: String, try_create_path: bool) -> Result<()>
                         obj.insert(x, JsonValue::new_object());
                         prv = obj.get_mut(x).unwrap();
                     } else {
-                        return Err(anyhow!("Path `{}` not exist", names[..index + 1].join(".")));
+                        return Err(
+                            anyhow!("Path `{}` not exist", names[..index + 1].join(".")).into()
+                        );
                     }
                 }
             }
             _ => {
-                return Err(anyhow!(
-                    "Path `{}` is not an object",
-                    names[..index + 1].join(".")
-                ))
+                return Err(
+                    anyhow!("Path `{}` is not an object", names[..index + 1].join(".")).into(),
+                )
             }
         }
     }
     let data = json::stringify_pretty(pf, 4);
-    Ok(fs::write(&*PROFILE_PATH, data.as_bytes())?)
+    fs::write(&*PROFILE_PATH, data.as_bytes()).map_err(|err| anyhow::Error::from(err).into())
 }
 
 pub fn get_and_parse<T: FromStr>(path: &str) -> Result<Option<T>> {
-    let names = parse_path(path)?;
+    let names = parse_path(path);
     let mut prv = &**PROFILE;
 
     for (index, x) in names.iter().enumerate() {
@@ -91,10 +98,9 @@ pub fn get_and_parse<T: FromStr>(path: &str) -> Result<Option<T>> {
                 None => return Ok(None),
             },
             _ => {
-                return Err(anyhow!(
-                    "Path `{}` is not an object",
-                    names[..index + 1].join(".")
-                ))
+                return Err(
+                    anyhow!("Path `{}` is not an object", names[..index + 1].join(".")).into(),
+                )
             }
         }
     }
@@ -102,8 +108,8 @@ pub fn get_and_parse<T: FromStr>(path: &str) -> Result<Option<T>> {
     match prv.as_str() {
         Some(s) => match s.parse() {
             Ok(t) => Ok(Some(t)),
-            Err(_) => Err(anyhow!("Value at `{}` is invalid", path)),
+            Err(_) => Err(anyhow!("Value at `{}` is invalid", path).into()),
         },
-        None => Err(anyhow!("Value at `{}` is expected to be a string", path)),
+        None => Err(anyhow!("Value at `{}` is expected to be a string", path).into()),
     }
 }
