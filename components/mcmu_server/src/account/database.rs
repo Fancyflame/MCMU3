@@ -1,7 +1,6 @@
 use super::Account;
 use mcmu_basic::UserId;
 use rocksdb::{DBWithThreadMode, SingleThreaded};
-use serde::Serialize;
 use std::path::Path;
 use thiserror::Error as ThisError;
 use tokio::sync::Mutex;
@@ -31,11 +30,44 @@ pub enum DatabaseError {
     AccountNotExist,
 }
 
-#[derive(Serialize, Clone)]
-pub enum QueryType<'a> {
-    Information(&'a UserId),
-    Friends(&'a UserId),
-    Messages(&'a UserId),
+macro_rules! impl_database {
+    {$($StructName:ident),*} => {
+        mod hidden_trait{
+            use serde::{Deserialize,Serialize};
+            use crate::account::{$($StructName),*};
+            use mcmu_basic::UserId;
+
+            #[derive(Serialize,Clone,Copy)]
+            enum QueryCode{
+                $($StructName),*
+            }
+
+            #[derive(Serialize, Clone)]
+            struct QueryMsg<'a>(
+                QueryCode, //编号
+                &'a UserId,
+            );
+
+            pub trait Queryable:for<'de> Deserialize<'de>+Serialize{
+                fn query_key(uid:&UserId)->Vec<u8>;
+            }
+
+            $(
+                impl Queryable for $StructName{
+                    #[inline]
+                    fn query_key(uid:&UserId)->Vec<u8>{
+                        bincode::serialize(&QueryMsg(QueryCode::$StructName,uid)).unwrap()
+                    }
+                }
+            )*
+        }
+
+        use hidden_trait::Queryable;
+    }
+}
+
+impl_database! {
+    Account
 }
 
 impl Database {
@@ -53,11 +85,11 @@ impl Database {
         }
     }
 
-    pub fn get(&self, qt: QueryType) -> Result<Option<Account>> {
+    pub fn get<Q: Queryable>(&self, uid: &UserId) -> Result<Option<Q>> {
         Ok(
             match self
                 .0
-                .get_pinned(bincode::serialize(&qt).unwrap())
+                .get_pinned(Q::query_key(uid))
                 .map_err(|err| DatabaseError::CoreError(err.into()))?
             {
                 Some(d) => {
@@ -68,46 +100,43 @@ impl Database {
         )
     }
 
-    pub fn set(&self, qt: QueryType, account: &Account) -> Result<()> {
-        if !self.exists(qt.clone()) {
+    pub fn set<Q: Queryable>(&self, uid: &UserId, item: &Q) -> Result<()> {
+        if !self.exists(uid) {
             return Err(DatabaseError::AccountNotExist);
         }
-        self.set_unchecked(qt, account)
+        self.set_unchecked(uid, item)
     }
 
     #[inline]
-    fn set_unchecked(&self, qt: QueryType, account: &Account) -> Result<()> {
-        self.0.put(
-            bincode::serialize(&qt).unwrap(),
-            bincode::serialize(account).unwrap(),
-        )?;
+    fn set_unchecked<Q: Queryable>(&self, uid: &UserId, item: &Q) -> Result<()> {
+        self.0
+            .put(Q::query_key(uid), bincode::serialize(item).unwrap())?;
         Ok(())
     }
 
     pub async fn create(&self, uid: &UserId, a: &Account) -> Result<()> {
         let _mutex = self.1.lock().await;
-        if self.exists(QueryType::Information(uid)) {
+        if self.exists(uid) {
             return Err(DatabaseError::AccountAlreadyExist);
         }
-        self.set_unchecked(QueryType::Information(uid), &a)
+        self.set_unchecked(uid, a)
         //self.set_unchecked(QueryType::Friends(), todo!())?;
         //self.set_unchecked(QueryType::Messages(), todo!())?;
     }
 
     pub fn remove(&self, uid: &UserId) -> Result<()> {
-        if !self.exists(QueryType::Information(uid)) {
+        if !self.exists(uid) {
             return Err(DatabaseError::AccountNotExist);
         }
 
-        self.0
-            .delete(bincode::serialize(&QueryType::Information(uid)).unwrap())?;
+        self.0.delete(Account::query_key(uid))?;
         //self.0.delete(QueryType::Friends(uid))?;
         //self.0.delete(QueryType::Messages(uid))?;
         Ok(())
     }
 
     #[inline]
-    pub fn exists(&self, qt: QueryType) -> bool {
-        self.0.key_may_exist(bincode::serialize(&qt).unwrap())
+    pub fn exists(&self, uid: &UserId) -> bool {
+        self.0.key_may_exist(Account::query_key(uid))
     }
 }

@@ -50,12 +50,11 @@ protocol_from![Login, Register, FriendOperate, RoomInfo];
 
 #[derive(Serialize, Deserialize)]
 pub enum Login {
-    LoginStart,
+    LoginStart(UserId),
     LoginStartResult {
         salt: [u8; 8],
     },
     Login {
-        id: UserId,
         pwd_hash2: [u8; 32], //加盐值后的hash
     },
     LoginSucceed,
@@ -119,11 +118,12 @@ pub enum ProtocolError {
     ProtocolTooLarge,
 }
 
-pub fn hash_pwd(bytes: &[u8]) -> [u8; 32] {
-    const PWD_SALT: &[u8] = b"mcmu is awesome";
+pub fn hash_pwd(bytes: &[u8], salt: Option<&[u8]>) -> [u8; 32] {
     let mut hasher = blake3::Hasher::new();
     hasher.update(bytes);
-    hasher.update(PWD_SALT);
+    if let Some(salt) = salt {
+        hasher.update(salt);
+    }
     *hasher.finalize().as_bytes()
 }
 

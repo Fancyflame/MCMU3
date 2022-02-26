@@ -1,32 +1,14 @@
 use chrono::{DateTime, Utc};
-use mcmu_basic::{
-    profile::{self, ProfileError},
-    UserId,
-};
+use mcmu_basic::{profile::ProfileError, UserId};
 use serde::{Deserialize, Serialize};
-use std::{collections::HashSet, path::PathBuf, sync::atomic::AtomicU64};
+use std::sync::atomic::AtomicU64;
 use thiserror::Error as ThisError;
 
-mod database;
+pub mod database;
 
-use database::{Database, DatabaseError};
+use database::DatabaseError;
 
 pub type Result<T> = std::result::Result<T, AccountError>;
-
-lazy_static! {
-    pub static ref GLOBAL_DB: Result<Database> = {
-        (|| {
-            let mut dbpath: PathBuf = profile::get_and_parse("server.databasePath")?.unwrap_or({
-                let mut p = profile::STORAGE_PATH.clone();
-                p.push("db");
-                p
-            });
-            dbpath.push("mcmu_db");
-
-            Ok(Database::new(dbpath).expect("Unable to start the database"))
-        })()
-    };
-}
 
 #[derive(Serialize, Deserialize)]
 pub struct Account {
@@ -34,9 +16,7 @@ pub struct Account {
     pub pwd_hash: [u8; 32],
     pub exclusive_title: Option<String>,
     pub is_administrator: bool,
-    pub play_time: PlayTime,
-    pub friends: HashSet<UserId>,
-    //pub messages: Vec<Message>,
+    pub play_time: PlayTime, //pub messages: Vec<Message>,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -84,7 +64,6 @@ impl Account {
             pwd_hash,
             exclusive_title: None,
             is_administrator: false,
-            friends: HashSet::new(),
             //messages: Vec::new(),
             play_time: PlayTime {
                 seconds_remaining: AtomicU64::new(0),
