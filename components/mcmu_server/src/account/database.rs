@@ -1,6 +1,7 @@
 use super::Account;
 use mcmu_basic::UserId;
 use rocksdb::{DBWithThreadMode, SingleThreaded};
+use smallvec::SmallVec;
 use std::path::Path;
 use thiserror::Error as ThisError;
 use tokio::sync::Mutex;
@@ -30,44 +31,40 @@ pub enum DatabaseError {
     AccountNotExist,
 }
 
-macro_rules! impl_database {
-    {$($StructName:ident),*} => {
-        mod hidden_trait{
-            use serde::{Deserialize,Serialize};
-            use crate::account::{$($StructName),*};
-            use mcmu_basic::UserId;
+mod hidden_trait {
+    use mcmu_basic::UserId;
+    use serde::{Deserialize, Serialize};
 
-            #[derive(Serialize,Clone,Copy)]
-            enum QueryCode{
-                $($StructName),*
-            }
+    const BUFFER_SIZE: usize = 34;
 
-            #[derive(Serialize, Clone)]
-            struct QueryMsg<'a>(
-                QueryCode, //编号
-                &'a UserId,
-            );
-
-            pub trait Queryable:for<'de> Deserialize<'de>+Serialize{
-                fn query_key(uid:&UserId)->Vec<u8>;
-            }
-
-            $(
-                impl Queryable for $StructName{
-                    #[inline]
-                    fn query_key(uid:&UserId)->Vec<u8>{
-                        bincode::serialize(&QueryMsg(QueryCode::$StructName,uid)).unwrap()
-                    }
-                }
-            )*
+    pub trait Queryable: for<'de> Deserialize<'de> + Serialize {
+        fn query_code() -> u16;
+        fn query_key(uid: &UserId) -> [u8; BUFFER_SIZE] {
+            let mut buf = [0u8; BUFFER_SIZE];
+            bincode::serialize_into(&mut buf[..], &(Self::query_code(), uid)).unwrap();
+            buf
         }
+    }
+}
 
-        use hidden_trait::Queryable;
+use hidden_trait::Queryable;
+
+macro_rules! impl_database {
+    {$($StructType:ty => $code:literal),*} => {
+        $(
+            impl Queryable for $StructType{
+                #[inline(always)]
+                fn query_code()->u16{
+                    $code
+                }
+            }
+        )*
     }
 }
 
 impl_database! {
-    Account
+    Account => 1,
+    SmallVec<[UserId;30]> => 2
 }
 
 impl Database {
@@ -109,8 +106,9 @@ impl Database {
 
     #[inline]
     fn set_unchecked<Q: Queryable>(&self, uid: &UserId, item: &Q) -> Result<()> {
-        self.0
-            .put(Q::query_key(uid), bincode::serialize(item).unwrap())?;
+        let mut buf = SmallVec::<[u8; 512]>::new();
+        bincode::serialize_into(&mut buf, item).unwrap();
+        self.0.put(Q::query_key(uid), &buf)?;
         Ok(())
     }
 

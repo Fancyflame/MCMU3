@@ -20,13 +20,13 @@ pub struct Token(pub [u8; 16]);
 
 //用于访问数据库（Deserialize因为需要检查字符串所以手动实现）
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq, Hash)]
-pub struct UserId([u8; 32]);
+pub struct UserId([u8; 24]);
 
 #[derive(Serialize, Deserialize)]
 pub enum Protocol {
     Login(Login),
     Register(Register),
-    FriendOperate(FriendOperate),
+    FriendManage(FriendManage),
     RoomInfo(RoomInfo),
     InvalidData,
     InvalidId,
@@ -46,7 +46,7 @@ macro_rules! protocol_from {
     };
 }
 
-protocol_from![Login, Register, FriendOperate, RoomInfo];
+protocol_from![Login, Register, FriendManage, RoomInfo];
 
 #[derive(Serialize, Deserialize)]
 pub enum Login {
@@ -92,7 +92,7 @@ pub enum RoomInfo {
 }
 
 #[derive(Serialize, Deserialize)]
-pub enum FriendOperate {
+pub enum FriendManage {
     Add(UserId),
     Remove(UserId),
 }
@@ -156,7 +156,10 @@ impl Protocol {
 impl UserId {
     #[inline]
     pub fn new(id: &str) -> Self {
-        UserId(*blake3::hash(id.as_bytes()).as_bytes())
+        let h = blake3::hash(id.as_bytes());
+        let mut b = [0u8; 24];
+        b.copy_from_slice(&h.as_bytes()[..24]);
+        UserId(b)
     }
 }
 
