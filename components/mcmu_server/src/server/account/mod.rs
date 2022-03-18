@@ -1,4 +1,5 @@
 use chrono::{DateTime, Utc};
+pub use mcmu_basic::protocol::mcmu::FriendList;
 use mcmu_basic::{profile::ProfileError, UserId};
 use serde::{Deserialize, Serialize};
 use std::sync::atomic::AtomicU64;
@@ -16,7 +17,7 @@ pub struct Account {
     pub pwd_hash: [u8; 32],
     pub exclusive_title: Option<String>,
     pub is_administrator: bool,
-    pub play_time: PlayTime, //pub messages: Vec<Message>,
+    pub play_time: PlayTime,
 }
 
 #[derive(Serialize, Deserialize)]

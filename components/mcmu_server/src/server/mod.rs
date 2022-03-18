@@ -1,21 +1,19 @@
 use anyhow::Result;
-use blake3::Hasher;
 use chrono::Utc;
 use rand::Rng;
-use smallvec::SmallVec;
-use std::{collections::HashMap, net::SocketAddrV4, path::PathBuf, sync::Arc, thread::AccessError};
+use std::{collections::HashMap, net::SocketAddrV4, path::PathBuf, sync::Arc};
 use tokio::{
     net::TcpListener,
     sync::{mpsc, Mutex, RwLock},
     task::JoinHandle,
 };
 
-use crate::account::{database::Database, Account, PlayTimeRule};
+use account::{database::Database, Account, FriendList, PlayTimeRule};
 use mcmu_basic::{invalid_data, profile, protocol::mcmu::*, UserId};
+use room_map::{RoomMap, Updater};
 
-pub struct RoomHost {
-    info: Vec<u8>,
-}
+pub mod account;
+mod room_map;
 
 pub async fn run() -> Result<()> {
     //服务器使用的数据库
@@ -26,16 +24,16 @@ pub async fn run() -> Result<()> {
             p
         });
 
-        Database::new(dbpath)?
+        RwLock::new(Database::new(dbpath)?)
     };
 
     //服务器绑定地址
     let bind_addr = profile::get_and_parse("server.bindAddr")?
         .unwrap_or(SocketAddrV4::new([0, 0, 0, 0].into(), 27979));
-    let room_hosts = RwLock::new(HashMap::<UserId, RoomHost>::new());
+    let room_map = RwLock::new(RoomMap::new());
 
     //打包
-    let bundle = Arc::new((db, room_hosts));
+    let bundle = Arc::new((db, room_map));
 
     //启动服务器
     let srv = TcpListener::bind(&bind_addr).await?;
@@ -56,7 +54,7 @@ pub async fn run() -> Result<()> {
             }
 
             //发送“无效数据”并中断会话
-            macro_rules! _invalid_data {
+            macro_rules! send_invalid_data {
                 () => {{
                     send!(invalid_data!());
                     return Ok(());
@@ -78,11 +76,22 @@ pub async fn run() -> Result<()> {
                 };
             }
 
-            let (db, room_hosts) = &*bundle;
-            let mut login_info: Option<(UserId, Account)> = None;
+            struct LoginInfo {
+                id: UserId,
+                account: Account,
+                friend_list_snapshot: FriendList,
+            }
 
+            //---控制台---
+            let (rwlock_db, room_map) = &*bundle;
+            let mut login_info: Option<LoginInfo> = None;
+            let mut room_info: Option<Updater> = None;
+
+            //开始循环
             loop {
-                match get_proto!() {
+                let proto = get_proto!();
+                let db = rwlock_db.read().await;
+                match proto {
                     //无论登录与否都可以进行的操作
 
                     //检查该id是否可用
@@ -93,11 +102,36 @@ pub async fn run() -> Result<()> {
                     //退出
                     Protocol::Exit => return Ok(()),
 
-                    proto => match &login_info {
+                    proto => match &mut login_info {
                         //已登录
-                        Some((id, account)) => match proto {
+                        Some(LoginInfo {
+                            id,
+                            account,
+                            friend_list_snapshot,
+                        }) => match proto {
                             //房间更新
                             Protocol::RoomInfo(ri) => match ri {
+                                //开房间
+                                RoomInfo::Open => match room_info {
+                                    Some(_) => send!(RoomInfo::AlreadyOpened),
+                                    None => {
+                                        let updater =
+                                            room_map.write().await.online(id, friend_list_snapshot);
+                                        room_info = Some(updater);
+                                        send!(RoomInfo::Succeed);
+                                    }
+                                },
+
+                                //关房间
+                                RoomInfo::Close => match room_info {
+                                    Some(_) => {
+                                        room_map.write().await.offline(id);
+                                        room_info = None;
+                                        send!(RoomInfo::Succeed);
+                                    }
+                                    None => send!(RoomInfo::NotOpened),
+                                },
+
                                 RoomInfo::UpdateTo(val) => {
                                     todo!()
                                 }
@@ -106,38 +140,23 @@ pub async fn run() -> Result<()> {
                             },
 
                             //好友管理
-                            Protocol::FriendManage(fm) => {
-                                let mut friend_list: SmallVec<_> = match db.get(&id)? {
-                                    Some(n) => n,
-                                    None => {
-                                        return Err(anyhow!(
-                                        "FriendList for user `{}` is not exist, it may be a bug",
-                                        account.name
-                                    ))
-                                    }
-                                };
+                            Protocol::FriendManage(fm) => match fm {
+                                FriendManage::Fetch => {
+                                    send!(FriendManage::Update(friend_list_snapshot.clone()));
+                                }
 
-                                match fm {
-                                    FriendManage::Add(tid) => {
-                                        if !friend_list.contains(&tid) {
-                                            friend_list.push(tid);
-                                            db.set(&id, account)?;
-                                        }
-                                    }
-
-                                    FriendManage::Remove(tid) => {
-                                        for (index, x) in friend_list.iter().enumerate() {
-                                            if *x == tid {
-                                                friend_list.remove(index);
-                                                db.set(&id, account)?;
-                                                break;
-                                            }
-                                        }
+                                FriendManage::Update(fls) => {
+                                    if fls.len() > 30 {
+                                        send!(FriendManage::TooMuchFriend);
+                                    } else {
+                                        *friend_list_snapshot = fls;
                                     }
                                 }
-                            }
 
-                            _ => _invalid_data!(),
+                                _ => send_invalid_data!(),
+                            },
+
+                            _ => send_invalid_data!(),
                         },
 
                         //未登录
@@ -145,9 +164,22 @@ pub async fn run() -> Result<()> {
                             //注册
                             Protocol::Register(Register::Register { id, name, pwd_hash }) => {
                                 let account = Account::new(name, pwd_hash);
-                                db.create(&id, &account).await?;
+                                drop(db);
+                                let mut db = rwlock_db.write().await;
+                                db.create(&id, &account)?;
                                 send!(Register::RegisterSucceed);
-                                login_info = Some((id, account));
+
+                                //创建好友列表快照
+                                let fls: FriendList = db.get(&id)?.ok_or(anyhow!(
+                                    "FriendList for user `{}` is not exist, it may be a bug",
+                                    account.name
+                                ))?;
+
+                                login_info = Some(LoginInfo {
+                                    id,
+                                    account,
+                                    friend_list_snapshot: fls,
+                                });
                             }
 
                             //登录
@@ -193,30 +225,28 @@ pub async fn run() -> Result<()> {
                                             }
 
                                             send!(Login::LoginSucceed);
-                                            login_info = Some((id, account));
+                                            login_info = Some(LoginInfo {
+                                                friend_list_snapshot: db.get(&id)?.ok_or(
+                                                anyhow!(
+                                                    "FriendList for user `{}` is not exist, it may be a bug",
+                                                    account.name
+                                                ))?,
+                                                id,
+                                                account,
+                                            });
                                             break;
                                         }
 
-                                        _ => _invalid_data!(),
+                                        _ => send_invalid_data!(),
                                     }
                                 }
                             }
 
-                            _ => _invalid_data!(),
+                            _ => send_invalid_data!(),
                         },
                     },
                 }
             }
-
-            /*let mut w = room_hosts.write().await;
-            //用户已登录
-            if w.contains_key(&id) {
-                send!(Login::AlreadyLoggedIn);
-                return Ok(());
-            }
-            let account = Arc::new(RwLock::new(account));
-            w.insert(id.clone(), account.clone());
-            drop(w);*/
         });
     }
 }

@@ -1,14 +1,13 @@
-use super::Account;
+use super::{Account, FriendList};
 use mcmu_basic::UserId;
 use rocksdb::{DBWithThreadMode, SingleThreaded};
 use smallvec::SmallVec;
 use std::path::Path;
 use thiserror::Error as ThisError;
-use tokio::sync::Mutex;
 
 pub type Result<T> = std::result::Result<T, DatabaseError>;
 
-pub struct Database(DBWithThreadMode<SingleThreaded>, Mutex<()>);
+pub struct Database(DBWithThreadMode<SingleThreaded>);
 
 #[derive(Debug, ThisError)]
 pub enum DatabaseError {
@@ -59,12 +58,24 @@ macro_rules! impl_database {
                 }
             }
         )*
+
+        impl Database{
+            pub fn remove(&mut self, uid: &UserId) -> Result<()> {
+                if !self.exists(uid) {
+                    return Err(DatabaseError::AccountNotExist);
+                }
+
+                $(self.0.delete(&<$StructType>::query_key(uid))?;)*
+                Ok(())
+            }
+        }
     }
 }
 
+//增加元素时不要忘记修改Database::create
 impl_database! {
     Account => 1,
-    SmallVec<[UserId;30]> => 2
+    FriendList => 2
 }
 
 impl Database {
@@ -77,7 +88,7 @@ impl Database {
             },
             path.as_ref(),
         ) {
-            Ok(db) => Ok(Database(db, Mutex::new(()))),
+            Ok(db) => Ok(Database(db)),
             Err(err) => Err(DatabaseError::OpenFailed(err)),
         }
     }
@@ -104,32 +115,21 @@ impl Database {
         self.set_unchecked(uid, item)
     }
 
+    pub fn create(&mut self, uid: &UserId, a: &Account) -> Result<()> {
+        if self.exists(uid) {
+            return Err(DatabaseError::AccountAlreadyExist);
+        }
+
+        self.set_unchecked(uid, a)?;
+        self.set_unchecked(uid, &FriendList::new())?;
+        Ok(())
+    }
+
     #[inline]
     fn set_unchecked<Q: Queryable>(&self, uid: &UserId, item: &Q) -> Result<()> {
         let mut buf = SmallVec::<[u8; 512]>::new();
         bincode::serialize_into(&mut buf, item).unwrap();
         self.0.put(Q::query_key(uid), &buf)?;
-        Ok(())
-    }
-
-    pub async fn create(&self, uid: &UserId, a: &Account) -> Result<()> {
-        let _mutex = self.1.lock().await;
-        if self.exists(uid) {
-            return Err(DatabaseError::AccountAlreadyExist);
-        }
-        self.set_unchecked(uid, a)
-        //self.set_unchecked(QueryType::Friends(), todo!())?;
-        //self.set_unchecked(QueryType::Messages(), todo!())?;
-    }
-
-    pub fn remove(&self, uid: &UserId) -> Result<()> {
-        if !self.exists(uid) {
-            return Err(DatabaseError::AccountNotExist);
-        }
-
-        self.0.delete(Account::query_key(uid))?;
-        //self.0.delete(QueryType::Friends(uid))?;
-        //self.0.delete(QueryType::Messages(uid))?;
         Ok(())
     }
 

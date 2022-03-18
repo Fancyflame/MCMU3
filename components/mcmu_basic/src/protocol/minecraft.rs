@@ -1,5 +1,5 @@
+use any_ref::{make_any_ref, AnyRef};
 use rand::Rng;
-//use serde::{Deserialize, Serialize};
 use std::{borrow::Cow, io::Write};
 
 pub const UNCONNECTED_PING: &[u8] = &[
@@ -135,6 +135,12 @@ impl<'a> UnconnectedPong<'a> {
         const BASE: u64 = 10000_00000_00000_00000;
         self.session_id = rand::thread_rng().gen_range(BASE..u64::MAX);
     }
+}
+
+pub type OwnedUnconnectedPong = AnyRef<Vec<u8>, _OwnedUnconnectedPong>;
+
+make_any_ref! {
+    pub struct _OwnedUnconnectedPong=for<'a> UnconnectedPong<'a>;
 }
 
 #[test]

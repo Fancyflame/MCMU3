@@ -18,3 +18,4 @@ blake3="1"
 home="0"
 anyhow="1"
 smallvec={version="1",features=["serde","write"]}
+any_ref={git="https://github.com/Fancyflame/Any-ref-rs.git"}
