@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:mcmu_flutter/HomePage.dart';
 import 'package:mcmu_flutter/Initial.dart';
+import 'package:mcmu_flutter/TempRoom.dart';
 import 'package:provider/provider.dart';
+import 'ProfilePage.dart';
 
 void main() {
   runApp(
@@ -10,9 +12,10 @@ void main() {
       child: MaterialApp(
         initialRoute: '/',
         routes: {
-          "/HomePage": (BuildContext context) => const HomePage(),
+          //"/HomePage": (BuildContext context) => const HomePage(),
           "/": (BuildContext context) => const Initial(),
-          "/UserProfile": (BuildContext context) => const ProfilePage()
+          //"/ProfilePage": (BuildContext context) => const ProfilePage(),
+          //'/TempRoom':(BuildContext context)=> const TempRoomPagej()
         },
       ),
     ),
@@ -30,4 +33,15 @@ bool getAccountStatus() {
     return true;
   }
   return false;
+}
+
+SliverList getDatafromList(List fromList) {
+  var resList = fromList.asMap().values.map((item) {
+    return ListTile(
+      leading: Image.network("${item['imageUrl']}"),
+      title: Text("${item['title']}"),
+      subtitle: Text("${item['author']}"),
+    );
+  });
+  return SliverList(delegate: SliverChildListDelegate(resList.toList()));
 }
