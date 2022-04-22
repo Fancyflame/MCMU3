@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:mcmu_flutter/main.dart';
 import 'package:provider/provider.dart';
 import 'HomePage.dart';
+import 'main.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({Key? key}) : super(key: key);
@@ -22,6 +23,7 @@ class _ProfilePageLoadState extends State<ProfilePage> {
           shrinkWrap: false,
           slivers: <Widget>[
             SliverAppBar(
+              automaticallyImplyLeading: true,
               expandedHeight: 256,
               backgroundColor: const Color.fromARGB(255, 117, 194, 121),
               flexibleSpace: FlexibleSpaceBar(
@@ -47,58 +49,54 @@ class _ProfilePageLoadState extends State<ProfilePage> {
                                 Text(partStatus.usrname),
                           ),
                         ),
-                        AnimatedOpacity(
-                          opacity: context.watch<AccountStatus>().showwidget
-                              ? 1.0
-                              : 0.0,
-                          duration: const Duration(milliseconds: 200),
-                          child: SizedBox(
-                              child: DecoratedBox(
-                            decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(8.0),
-                                boxShadow: const [
-                                  /* BoxShadow(
-                                    color: Colors.black26,
-                                    blurRadius: 4.0,
-                                    offset: Offset(-2.0, -2.0)), */
-                                ]),
-                            child: Container(
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(8.0),
-                                color: const Color.fromARGB(255, 117, 194, 121),
-                              ),
-                              //color: Colors.white,
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                textBaseline: TextBaseline.alphabetic,
-                                mainAxisAlignment: MainAxisAlignment.start,
-                                children: <Widget>[
-                                  Expanded(
-                                    flex: 1,
-                                    child: TextField(
-                                      style: const TextStyle(
-                                        fontSize: 18,
-                                        color: Colors.white,
-                                      ),
-                                      controller: musernameController,
-                                      textAlign: TextAlign.start,
-                                      maxLength: 16,
-                                      decoration:
-                                          const InputDecoration.collapsed(
-                                        hintText: '输入昵称',
-                                        hintStyle:
-                                            TextStyle(color: Colors.white),
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          )),
-                        ),
                       ],
                     ),
-                    trailing: IconButton(
+                    onTap: () => showDialog(
+                      context: context,
+                      builder: (BuildContext context) => AlertDialog(
+                        contentPadding: const EdgeInsets.only(
+                            left: 40.0, right: 40.0, bottom: 20.0),
+                        title: const Text("修改昵称"),
+                        content: SingleChildScrollView(
+                          child: ListBody(
+                            children: <Widget>[
+                              TextField(
+                                autofocus: true,
+                                controller: musernameController,
+                                decoration: InputDecoration(
+                                  focusColor:
+                                      const Color.fromARGB(255, 117, 194, 121),
+                                  labelText: "HI",
+                                  errorText: Provider.of<AccountStatus>(context)
+                                          .textStatus
+                                      ? "名称不能为空"
+                                      : null,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        actions: <Widget>[
+                          TextButton(
+                              onPressed: () {
+                                if (musernameController.text.toString() != '') {
+                                  //print(musernameController.text);
+                                  context.read<AccountStatus>().setName();
+                                  Navigator.of(context).pop();
+                                  context
+                                      .read<AccountStatus>()
+                                      .errorStatusClr();
+                                } else {
+                                  context
+                                      .read<AccountStatus>()
+                                      .errorStatusSet();
+                                }
+                              },
+                              child: const Text("Approve"))
+                        ],
+                      ),
+                    ),
+                    /* trailing: IconButton(
                       onPressed: () {
                         if (context.read<AccountStatus>().count == 0) {
                           context.read<AccountStatus>().showwidget = true;
@@ -121,7 +119,7 @@ class _ProfilePageLoadState extends State<ProfilePage> {
                       },
                       icon: const Icon(Icons.edit_attributes_rounded),
                     ),
-
+ */
                     /* trailing: SizedBox(
                         width: 128,
                         child: DecoratedBox(
@@ -190,7 +188,7 @@ class _ProfilePageLoadState extends State<ProfilePage> {
                     leading: null,
                     title: Text('个性签名'),
                     subtitle: Text('展现自己的态度'),
-                    trailing: Icon(Icons.edit_attributes_rounded),
+                    // trailing: Icon(Icons.edit_attributes_rounded),
                   ),
                 ],
               ),

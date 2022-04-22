@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:mcmu_flutter/HomePage.dart';
 import 'package:mcmu_flutter/Initial.dart';
-import 'package:mcmu_flutter/TempRoom.dart';
 import 'package:provider/provider.dart';
-import 'ProfilePage.dart';
+import 'TempRoom.dart';
 
 void main() {
   runApp(
@@ -35,6 +35,31 @@ bool getAccountStatus() {
   return false;
 }
 
+class AccountStatus extends ChangeNotifier {
+  var usrname = 'guest';
+  bool showwidget = false;
+  int count = 0;
+  bool textStatus = false;
+
+  String setName() {
+    usrname = musernameController.text;
+    notifyListeners();
+    return usrname;
+  }
+
+  bool errorStatusSet() {
+    textStatus = true;
+    notifyListeners();
+    return textStatus;
+  }
+
+  bool errorStatusClr() {
+    textStatus = false;
+    notifyListeners();
+    return textStatus;
+  }
+}
+
 SliverList getDatafromList(List fromList) {
   var resList = fromList.asMap().values.map((item) {
     return ListTile(
@@ -44,4 +69,11 @@ SliverList getDatafromList(List fromList) {
     );
   });
   return SliverList(delegate: SliverChildListDelegate(resList.toList()));
+}
+
+class DialogControl {
+  static loadingControl() async {
+    await Future.delayed(const Duration(seconds: 2));
+    SmartDialog.dismiss();
+  }
 }

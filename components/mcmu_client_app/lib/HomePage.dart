@@ -10,22 +10,6 @@ import 'ProfilePage.dart';
 TextEditingController musernameController = TextEditingController();
 bool showwidget = false;
 
-class AccountStatus extends ChangeNotifier {
-  var usrname = 'guest';
-  bool showwidget = false;
-  int count = 0;
-  String setName() {
-    usrname = musernameController.text;
-    notifyListeners();
-    return usrname;
-  }
-
-  bool setOpc() {
-    notifyListeners();
-    return showwidget;
-  }
-}
-
 class HomePage extends StatefulWidget {
   const HomePage({Key? key}) : super(key: key);
 

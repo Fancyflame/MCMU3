@@ -33,9 +33,14 @@ dependencies:
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.2
+#CustomdependsBelow
   english_words: ^3.1.0
   keframe: ^2.0.2
   provider: ^6.0.0+1
+  flutter_speed_dial: ^5.0.0+1
+  flutter_smart_dialog: any
+  material_floating_search_bar: ^0.3.7
+#CustomdependsAbove
 dev_dependencies:
   flutter_test:
     sdk: flutter
