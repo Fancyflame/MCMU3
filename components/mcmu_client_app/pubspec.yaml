@@ -38,8 +38,7 @@ dependencies:
   keframe: ^2.0.2
   provider: ^6.0.0+1
   flutter_speed_dial: ^5.0.0+1
-  flutter_smart_dialog: any
-  material_floating_search_bar: ^0.3.7
+  verification_code_custom: ^0.0.3
 #CustomdependsAbove
 dev_dependencies:
   flutter_test:

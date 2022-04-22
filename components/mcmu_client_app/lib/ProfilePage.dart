@@ -37,74 +37,90 @@ class _ProfilePageLoadState extends State<ProfilePage> {
               delegate: SliverChildListDelegate(
                 [
                   ListTile(
-                    leading: null,
-                    title: const Text('昵称'),
-                    subtitle: Stack(
-                      fit: StackFit.loose,
-                      alignment: AlignmentDirectional.centerStart,
-                      children: <Widget>[
-                        SizedBox(
-                          child: Consumer<AccountStatus>(
-                            builder: (_, partStatus, __) =>
-                                Text(partStatus.usrname),
+                      leading: null,
+                      title: const Text('昵称'),
+                      subtitle: Stack(
+                        fit: StackFit.loose,
+                        alignment: AlignmentDirectional.centerStart,
+                        children: <Widget>[
+                          SizedBox(
+                            child: Consumer<AccountStatus>(
+                              builder: (_, partStatus, __) =>
+                                  Text(partStatus.usrname),
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                    onTap: () => showDialog(
-                      context: context,
-                      builder: (BuildContext context) => AlertDialog(
-                        shape: const RoundedRectangleBorder(
-                          borderRadius: BorderRadius.all(Radius.circular(15)),
-                        ),
-                        contentPadding: const EdgeInsets.only(
-                            left: 20.0, right: 20.0, bottom: 20.0),
-                        title: const Text("修改昵称"),
-                        content: SingleChildScrollView(
-                          child: ListBody(
-                            children: <Widget>[
-                              TextField(
-                                autofocus: true,
-                                controller: musernameController,
-                                decoration: InputDecoration(
-                                  focusColor:
-                                      const Color.fromARGB(255, 117, 194, 121),
-                                  labelText: "HI",
-                                  errorText: Provider.of<AccountStatus>(context)
-                                          .textStatus
-                                      ? "名称不能为空"
-                                      : null,
-                                ),
-                                onChanged: (value) {
-                                  context
-                                      .read<AccountStatus>()
-                                      .errorStatusClr();
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-                        actions: <Widget>[
-                          TextButton(
-                              onPressed: () {
-                                if (musernameController.text.toString() != '') {
-                                  //print(musernameController.text);
-                                  context.read<AccountStatus>().setName();
-                                  Navigator.of(context).pop();
-                                  context
-                                      .read<AccountStatus>()
-                                      .errorStatusClr();
-                                } else {
-                                  context
-                                      .read<AccountStatus>()
-                                      .errorStatusSet();
-                                }
-                              },
-                              child: const Text("Approve"))
                         ],
                       ),
-                    ),
-                    /* trailing: IconButton(
+                      onTap: () {
+                        context.read<AccountStatus>().errorStatusClr();
+                        showDialog(
+                          context: context,
+                          builder: (BuildContext context) => AlertDialog(
+                            shape: const RoundedRectangleBorder(
+                              borderRadius:
+                                  BorderRadius.all(Radius.circular(15)),
+                            ),
+                            contentPadding: const EdgeInsets.only(
+                                left: 20.0, right: 20.0, bottom: 20.0),
+                            title: const Text("修改昵称"),
+                            content: SingleChildScrollView(
+                              child: ListBody(
+                                children: <Widget>[
+                                  TextField(
+                                    autofocus: true,
+                                    controller: musernameController,
+                                    decoration: InputDecoration(
+                                      labelStyle: const TextStyle(
+                                        color:
+                                            Color.fromARGB(255, 117, 194, 121),
+                                      ),
+                                      focusedBorder: const UnderlineInputBorder(
+                                        borderSide: BorderSide(
+                                          color: Color.fromARGB(
+                                              255, 117, 194, 121),
+                                        ),
+                                      ),
+                                      focusColor: const Color.fromARGB(
+                                          255, 117, 194, 121),
+                                      labelText: "HI",
+                                      errorText:
+                                          Provider.of<AccountStatus>(context)
+                                                  .textStatus
+                                              ? "名称不能为空"
+                                              : null,
+                                    ),
+                                    onChanged: (value) {
+                                      context
+                                          .read<AccountStatus>()
+                                          .errorStatusClr();
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+                            actions: <Widget>[
+                              TextButton(
+                                  onPressed: () {
+                                    if (musernameController.text.toString() !=
+                                        '') {
+                                      //print(musernameController.text);
+                                      context.read<AccountStatus>().setName();
+                                      Navigator.of(context).pop();
+                                      context
+                                          .read<AccountStatus>()
+                                          .errorStatusClr();
+                                    } else {
+                                      context
+                                          .read<AccountStatus>()
+                                          .errorStatusSet();
+                                    }
+                                  },
+                                  child: const Text("Approve"))
+                            ],
+                          ),
+                        );
+                      }
+                      /* trailing: IconButton(
                       onPressed: () {
                         if (context.read<AccountStatus>().count == 0) {
                           context.read<AccountStatus>().showwidget = true;
@@ -128,7 +144,7 @@ class _ProfilePageLoadState extends State<ProfilePage> {
                       icon: const Icon(Icons.edit_attributes_rounded),
                     ),
  */
-                    /* trailing: SizedBox(
+                      /* trailing: SizedBox(
                         width: 128,
                         child: DecoratedBox(
                           decoration: BoxDecoration(
@@ -181,7 +197,7 @@ class _ProfilePageLoadState extends State<ProfilePage> {
                           ),
                         )),
                     onTap: null, */
-                  ),
+                      ),
                   const ListTile(
                     leading: null,
                     title: Text('关注'),

@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_smart_dialog/flutter_smart_dialog.dart';
 import 'package:mcmu_flutter/HomePage.dart';
 import 'package:mcmu_flutter/Initial.dart';
 import 'package:provider/provider.dart';
@@ -69,11 +68,4 @@ SliverList getDatafromList(List fromList) {
     );
   });
   return SliverList(delegate: SliverChildListDelegate(resList.toList()));
-}
-
-class DialogControl {
-  static loadingControl() async {
-    await Future.delayed(const Duration(seconds: 2));
-    SmartDialog.dismiss();
-  }
 }
