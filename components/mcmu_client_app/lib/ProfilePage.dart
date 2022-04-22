@@ -54,8 +54,11 @@ class _ProfilePageLoadState extends State<ProfilePage> {
                     onTap: () => showDialog(
                       context: context,
                       builder: (BuildContext context) => AlertDialog(
+                        shape: const RoundedRectangleBorder(
+                          borderRadius: BorderRadius.all(Radius.circular(15)),
+                        ),
                         contentPadding: const EdgeInsets.only(
-                            left: 40.0, right: 40.0, bottom: 20.0),
+                            left: 20.0, right: 20.0, bottom: 20.0),
                         title: const Text("修改昵称"),
                         content: SingleChildScrollView(
                           child: ListBody(
@@ -72,6 +75,11 @@ class _ProfilePageLoadState extends State<ProfilePage> {
                                       ? "名称不能为空"
                                       : null,
                                 ),
+                                onChanged: (value) {
+                                  context
+                                      .read<AccountStatus>()
+                                      .errorStatusClr();
+                                },
                               ),
                             ],
                           ),
