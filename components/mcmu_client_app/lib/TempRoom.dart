@@ -3,7 +3,8 @@ import 'package:mcmu_flutter/main.dart';
 import 'package:provider/provider.dart';
 import 'HomePage.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
-import 'package:verification_code_custom/verification_code_custom.dart';
+import 'package:pin_code_fields/pin_code_fields.dart';
+import 'ListData.dart';
 
 class TempRoomPagej extends StatefulWidget {
   const TempRoomPagej({Key? key}) : super(key: key);
@@ -12,9 +13,11 @@ class TempRoomPagej extends StatefulWidget {
 }
 
 class _TempRoomPagejState extends State {
+  final GlobalKey<ScaffoldMessengerState> _scaffoldkey = GlobalKey();
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      scaffoldMessengerKey: _scaffoldkey,
       home: Scaffold(
         floatingActionButton: SpeedDial(
           backgroundColor: const Color.fromARGB(255, 117, 194, 121),
@@ -26,6 +29,7 @@ class _TempRoomPagejState extends State {
                 child: const Icon(Icons.domain_rounded),
                 foregroundColor: const Color.fromARGB(255, 117, 194, 121),
                 label: '创建房间'),
+            //按房间号加入的同时相当于进入了群组/单独添加群组(pending)
             SpeedDialChild(
               child: const Icon(Icons.vpn_key_rounded),
               foregroundColor: const Color.fromARGB(255, 117, 194, 121),
@@ -43,11 +47,20 @@ class _TempRoomPagejState extends State {
                           padding: const EdgeInsets.only(
                               top: 28, left: 28, right: 28),
                           height: 128,
-                          child: VerificationCodeCustom(
-                            textChanged: (list) {
-                              String result = '';
-                              for (String str in list) {
-                                result += str;
+                          child: PinCodeTextField(
+                            autoFocus: true,
+                            appContext: context,
+                            length: 4,
+                            onChanged: (String value) {
+                              if (value.length == 4) {
+                                Navigator.pop(context);
+                                if (value != "tudouni92") {
+                                  _scaffoldkey.currentState?.showSnackBar(
+                                    const SnackBar(
+                                      content: Text("Non-existance Room"),
+                                    ),
+                                  );
+                                }
                               }
                             },
                           ),
@@ -58,11 +71,11 @@ class _TempRoomPagejState extends State {
             )
           ],
         ),
-        body: const CustomScrollView(
-          physics: ClampingScrollPhysics(),
+        body: CustomScrollView(
+          physics: const ClampingScrollPhysics(),
           shrinkWrap: false,
           slivers: <Widget>[
-            SliverAppBar(
+            const SliverAppBar(
               floating: true,
               snap: true,
               automaticallyImplyLeading: true,
@@ -73,6 +86,7 @@ class _TempRoomPagejState extends State {
                 collapseMode: CollapseMode.pin,
               ),
             ),
+            getDatafromList(listData),
           ],
         ),
       ),

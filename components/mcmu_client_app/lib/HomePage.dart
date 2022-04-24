@@ -1,6 +1,7 @@
 // ignore: file_names
 
 import 'package:flutter/material.dart';
+import 'package:mcmu_flutter/Friends.dart';
 import 'package:mcmu_flutter/ListData.dart';
 import 'package:mcmu_flutter/TempRoom.dart';
 import 'package:mcmu_flutter/main.dart';
@@ -22,6 +23,7 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      // theme: customThemeData(),
       title: 'MCMUII-test',
       home: Scaffold(
         key: _scaffoldKey,
@@ -51,15 +53,12 @@ class _HomePageState extends State<HomePage> {
           slivers: <Widget>[
             SliverAppBar(
               //title: const Text('MCMUII'),
+              floating: true,
+              snap: true,
               leading: Builder(builder: (context) {
                 return IconButton(
                   onPressed: () {
                     Scaffold.of(context).openDrawer();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Why It does not work'),
-                      ),
-                    );
                   },
                   icon: const Icon(Icons.menu),
                 );
@@ -67,13 +66,18 @@ class _HomePageState extends State<HomePage> {
               expandedHeight: 256,
               backgroundColor: const Color.fromARGB(255, 117, 194, 121),
               flexibleSpace: const FlexibleSpaceBar(
-                title: Text("MCMUII"),
+                title: Text(
+                  "MCMUII",
+                ),
                 collapseMode: CollapseMode.pin,
               ),
             ),
             //getSlivers(listData, context),
             //getSlivers(listData, context)
+
             getDatafromList(listData),
+            //这里可以用来展示推荐/历史服务器列表(pending)
+
             // ignore: unnecessary_null_comparison
           ],
         ),
@@ -107,9 +111,13 @@ class _HomePageState extends State<HomePage> {
                   }
                 },
               ),
-              const ListTile(
-                leading: Icon(Icons.favorite_rounded),
-                title: Text("我的关注"),
+              ListTile(
+                leading: const Icon(Icons.favorite_rounded),
+                title: const Text("我的关注"),
+                onTap: () {
+                  Navigator.push(context,
+                      MaterialPageRoute(builder: (context) => const Friends()));
+                },
               ),
               const ListTile(
                 leading: Icon(Icons.meeting_room_rounded),

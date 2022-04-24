@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:mcmu_flutter/HomePage.dart';
 import 'package:mcmu_flutter/Initial.dart';
 import 'package:provider/provider.dart';
@@ -65,6 +66,30 @@ SliverList getDatafromList(List fromList) {
       leading: Image.network("${item['imageUrl']}"),
       title: Text("${item['title']}"),
       subtitle: Text("${item['author']}"),
+    );
+  });
+  return SliverList(delegate: SliverChildListDelegate(resList.toList()));
+}
+
+customThemeData() {
+  return ThemeData(
+    primaryColor: const Color.fromARGB(255, 117, 194, 121),
+    appBarTheme: const AppBarTheme(
+      titleTextStyle: TextStyle(color: Colors.white),
+    ),
+  );
+}
+
+SliverList getDatafromListForFriends(List fromList) {
+  var resList = fromList.asMap().values.map((item) {
+    return ListTile(
+      leading: Image.network("${item['imageUrl']}"),
+      title: Text("${item['title']}"),
+      subtitle: Text("${item['author']}"),
+      trailing: const Icon(
+        Icons.more_horiz_rounded,
+        size: 20,
+      ),
     );
   });
   return SliverList(delegate: SliverChildListDelegate(resList.toList()));
